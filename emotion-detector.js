@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const NodeWebcam = require('node-webcam');
 const sharp = require('sharp');
 const path = require('path');
+const setEmotionLed = require('./led_control');
 
 const { execSync } = require('child_process');
 
@@ -336,37 +337,31 @@ class EmotionDetector {
         }
 
         let imagePath = null;
-        
+
         try {
             console.log('Capturing image...');
             imagePath = await this.captureImage();
             console.log('Image captured:', imagePath);
-            
+
             console.log('Processing image for emotions...');
             const results = await this.processImage(imagePath);
-            
+
             if (results.length > 0) {
-                console.log('Detected faces and emotions:');
-                results.forEach((result, index) => {
-                    console.log(`Face ${index + 1}: ${result.emotion} at (${result.x}, ${result.y})`);
-                });
+            const primaryEmotion = results[0].emotion;
+            setEmotionLed(primaryEmotion);
             } else {
-                console.log('No faces detected');
+            setEmotionLed('Neutral');
             }
-            
+
             return results;
-            
+
         } catch (error) {
             console.error('Error detecting emotions:', error);
+            setEmotionLed('Neutral');
             return [];
         } finally {
-            // Clean up
             if (imagePath && await fs.pathExists(imagePath)) {
-                try {
-                    // await fs.remove(imagePath);
-                } catch (cleanupError) {
-                    console.warn('Failed to clean up image:', cleanupError.message);
-                }
+            // await fs.remove(imagePath); // 선택적으로 삭제
             }
         }
     }
